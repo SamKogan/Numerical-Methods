@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Matrix Numerical Methods - Home{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <h1 class="text-center mb-4">Matrix Numerical Methods</h1>
+        <p class="lead text-center mb-5">
+            Interactive demonstrations of numerical methods for 3x3 matrices
+        </p>
+        
+        <div class="methods">
+            <h2>Iterative Methods</h2>
+            <a href="/power-method" class="method-link">
+                <h3>Power Method</h3>
+                <p>Find the dominant eigenvalue and eigenvector of a matrix using iterative multiplication.</p>
+            </a>
+            
+            <a href="/jacobi" class="method-link">
+                <h3>Jacobi Method</h3>
+                <p>Solve systems of linear equations using parallel updates of solution components.</p>
+            </a>
+            
+            <a href="/gauss-seidel" class="method-link">
+                <h3>Gauss-Seidel Method</h3>
+                <p>Solve systems of linear equations using sequential updates of solution components.</p>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

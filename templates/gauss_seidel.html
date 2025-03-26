@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}Gauss-Seidel Method{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <h2 class="text-center mb-4">Gauss-Seidel Method</h2>
+        <p class="text-center">Solving Ax = b iteratively</p>
+        
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="text-center">Matrix A:</h5>
+                <div class="mb-3">
+                    <div class="matrix-input">
+                        {% for i in range(3) %}
+                        <div class="matrix-row">
+                            {% for j in range(3) %}
+                            <input type="number" class="matrix-cell" id="a{{i}}{{j}}" value="{{matrix[i][j]}}" step="1">
+                            {% endfor %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-2">
+                        <button id="updateMatrix" class="btn btn-primary">Update Matrix</button>
+                        <button id="randomMatrix" class="btn btn-secondary">Random Matrix</button>
+                    </div>
+                </div>
+                <div class="text-center" id="matrix">\[ {{ matrix_latex }} \]</div>
+                
+                <h5 class="text-center">Vector b:</h5>
+                <div class="mb-3">
+                    <div class="matrix-input">
+                        <div class="matrix-row">
+                            {% for i in range(3) %}
+                            <input type="number" class="matrix-cell" id="b{{i}}" value="{{b[i]}}" step="1">
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <div class="text-center" id="b-vector">\[ {{ b_latex }} \]</div>
+                
+                <h5 class="text-center">Current solution x:</h5>
+                <div class="text-center" id="x-vector">\[ x_{{"{"}}{{step}}{{"}"}} = {{ x_latex }} \]</div>
+                
+                <h5 class="text-center">Step {{ step }}</h5>
+                
+                <div class="text-center mb-4">
+                    <button id="nextStep" class="btn btn-primary step-button">Next Step</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <h5 class="text-center">Solution History:</h5>
+                <div id="solution-history" class="solution-history text-center">
+                    {% if history %}
+                    {% for entry in history %}
+                    <div class="step-container">
+                        \[ x_{{"{"}}{{entry.step}}{{"}"}} = {{ entry.x_latex }} \]
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <p>No steps taken yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    var history = [];
+    
+    $('#nextStep').click(function() {
+        $.get('/gauss-seidel/step', function(data) {
+            history.push(data);
+            updateHistory();
+            $('#x-vector').html('\\[ x_{' + data.step + '} = ' + data.x_latex + '\\]');
+            $('#step').text(data.step);
+            MathJax.typesetPromise().then(function() {
+                var historyDiv = document.getElementById('solution-history');
+                historyDiv.scrollLeft = historyDiv.scrollWidth;
+            });
+        });
+    });
+
+    $('#updateMatrix').click(function() {
+        var matrix = [];
+        for (var i = 0; i < 3; i++) {
+            matrix[i] = [];
+            for (var j = 0; j < 3; j++) {
+                matrix[i][j] = parseInt($('#a' + i + j).val()) || 0;
+            }
+        }
+        
+        var b = [];
+        for (var i = 0; i < 3; i++) {
+            b[i] = parseInt($('#b' + i).val()) || 0;
+        }
+        
+        $.post('/gauss-seidel/update-matrix', {
+            matrix: JSON.stringify(matrix),
+            b: JSON.stringify(b)
+        }, function(data) {
+            history = [];
+            updateHistory();
+            $('#matrix').html('\\[' + data.matrix_latex + '\\]');
+            $('#b-vector').html('\\[' + data.b_latex + '\\]');
+            $('#x-vector').html('\\[x_0 = ' + data.x_latex + '\\]');
+            $('#step').text('0');
+            
+            // Update input fields with new matrix values (in case of diagonal dominance)
+            var matrix = data.matrix;
+            for (var i = 0; i < 3; i++) {
+                for (var j = 0; j < 3; j++) {
+                    $('#a' + i + j).val(matrix[i][j]);
+                }
+            }
+            
+            MathJax.typesetPromise();
+        });
+    });
+
+    $('#randomMatrix').click(function() {
+        $.get('/gauss-seidel/new-matrix', function(data) {
+            history = [];
+            updateHistory();
+            $('#matrix').html('\\[' + data.matrix_latex + '\\]');
+            $('#b-vector').html('\\[' + data.b_latex + '\\]');
+            $('#x-vector').html('\\[x_0 = ' + data.x_latex + '\\]');
+            $('#step').text('0');
+            
+            // Update input fields with new matrix values
+            var matrix = data.matrix;
+            for (var i = 0; i < 3; i++) {
+                for (var j = 0; j < 3; j++) {
+                    $('#a' + i + j).val(matrix[i][j]);
+                }
+            }
+            
+            MathJax.typesetPromise();
+        });
+    });
+
+    function updateHistory() {
+        if (history.length === 0) {
+            $('#solution-history').html('<p>No steps taken yet.</p>');
+            return;
+        }
+        
+        var latex = '';
+        history.forEach(function(entry) {
+            latex += '<div class="step-container">';
+            latex += '\\[ x_{' + entry.step + '} = ' + entry.x_latex + ' \\]';
+            latex += '</div>';
+        });
+        $('#solution-history').html(latex);
+        MathJax.typesetPromise();
+    }
+});
+</script>
+{% endblock %}

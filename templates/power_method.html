@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}Power Method{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <h2 class="text-center mb-4">Power Method</h2>
+        <p class="text-center">Finding the dominant eigenvalue and eigenvector</p>
+        
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5>Matrix A:</h5>
+                <div class="mb-3">
+                    <div class="matrix-input">
+                        {% for i in range(3) %}
+                        <div class="matrix-row">
+                            {% for j in range(3) %}
+                            <input type="number" class="matrix-cell" id="a{{i}}{{j}}" value="{{matrix[i][j]}}" step="1">
+                            {% endfor %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-2">
+                        <button id="updateMatrix" class="btn btn-primary">Update Matrix</button>
+                        <button id="randomMatrix" class="btn btn-secondary">Random Matrix</button>
+                    </div>
+                </div>
+                <div id="matrix">\[ {{ matrix_latex }} \]</div>
+                
+                <h5>Current eigenvector:</h5>
+                <div id="vector">\[ x_{{"{"}}{{step}}{{"}"}} = {{ vector_latex }} \]</div>
+                
+                <h5>Current eigenvalue:</h5>
+                <div id="eigenvalue">\[ \lambda_{{"{"}}{{step}}{{"}"}} = {{ "%.3f"|format(eigenvalue) }} \]</div>
+                
+                <h5>Step {{ step }}</h5>
+                
+                <button id="nextStep" class="btn btn-primary">Next Step</button>
+                <button id="newMatrix" class="btn btn-secondary">Generate New Matrix</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <h5>Solution History:</h5>
+                <div id="solution-history" class="solution-history" style="overflow-x: auto; white-space: nowrap;">
+                    {% if history %}
+                    {% for entry in history %}
+                    <div class="step-container" style="display: inline-block; margin: 10px;">
+                        \[ x_{{"{"}}{{entry.step}}{{"}"}} = {{ entry.vector_latex }} \]
+                        \[ \lambda_{{"{"}}{{entry.step}}{{"}"}} = {{ "%.3f"|format(entry.eigenvalue) }} \]
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <p>No steps taken yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    var history = [];
+    
+    $('#nextStep').click(function() {
+        $.get('/power-method/step', function(data) {
+            history.push(data);
+            updateHistory();
+            $('#vector').html('\\[ x_{' + data.step + '} = ' + data.vector_latex + '\\]');
+            $('#eigenvalue').html('\\[\\lambda_{' + data.step + '} = ' + data.eigenvalue.toFixed(3) + '\\]');
+            $('#step').text(data.step);
+            MathJax.typesetPromise().then(function() {
+                var historyDiv = document.getElementById('solution-history');
+                historyDiv.scrollLeft = historyDiv.scrollWidth;
+            });
+        });
+    });
+
+    $('#updateMatrix').click(function() {
+        var matrix = [];
+        for (var i = 0; i < 3; i++) {
+            matrix[i] = [];
+            for (var j = 0; j < 3; j++) {
+                matrix[i][j] = parseInt($('#a' + i + j).val()) || 0;
+            }
+        }
+        
+        $.post('/power-method/update-matrix', {matrix: JSON.stringify(matrix)}, function(data) {
+            history = [];
+            updateHistory();
+            $('#matrix').html('\\[' + data.matrix_latex + '\\]');
+            $('#vector').html('\\[x_0 = ' + data.vector_latex + '\\]');
+            $('#eigenvalue').html('\\[\\lambda_0 = 0\\]');
+            $('#step').text('0');
+            MathJax.typesetPromise();
+        });
+    });
+
+    $('#randomMatrix').click(function() {
+        $.get('/power-method/new-matrix', function(data) {
+            history = [];
+            updateHistory();
+            $('#matrix').html('\\[' + data.matrix_latex + '\\]');
+            $('#vector').html('\\[x_0 = ' + data.vector_latex + '\\]');
+            $('#eigenvalue').html('\\[\\lambda_0 = 0\\]');
+            $('#step').text('0');
+            
+            // Update input fields with new matrix values
+            var matrix = data.matrix;
+            for (var i = 0; i < 3; i++) {
+                for (var j = 0; j < 3; j++) {
+                    $('#a' + i + j).val(matrix[i][j]);
+                }
+            }
+            
+            MathJax.typesetPromise();
+        });
+    });
+
+    $('#newMatrix').click(function() {
+        $.get('/power-method/new-matrix', function(data) {
+            history = [];
+            updateHistory();
+            $('#matrix').html('\\[' + data.matrix_latex + '\\]');
+            $('#vector').html('\\[x_0 = ' + data.vector_latex + '\\]');
+            $('#eigenvalue').html('\\[\\lambda_0 = 0\\]');
+            $('#step').text('0');
+            MathJax.typesetPromise().then(function() {
+                var historyDiv = document.getElementById('solution-history');
+                historyDiv.scrollLeft = historyDiv.scrollWidth;
+            });
+        });
+    });
+
+    function updateHistory() {
+        if (history.length === 0) {
+            $('#solution-history').html('<p>No steps taken yet.</p>');
+            return;
+        }
+        
+        var latex = '';
+        history.forEach(function(entry) {
+            latex += '<div class="step-container" style="display: inline-block; margin: 10px;">';
+            latex += '\\[ x_{' + entry.step + '} = ' + entry.vector_latex + ' \\]';
+            latex += '\\[ \\lambda_{' + entry.step + '} = ' + entry.eigenvalue.toFixed(3) + ' \\]';
+            latex += '</div>';
+        });
+        $('#solution-history').html(latex);
+        MathJax.typesetPromise();
+    }
+});
+</script>
+{% endblock %}
